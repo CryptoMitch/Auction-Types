@@ -1,5 +1,5 @@
-//This code can be found at https://programtheblockchain.com/posts/2018/04/03/writing-a-vickrey-auction-contract/
-
+// This code can be found at https://programtheblockchain.com/posts/2018/04/03/writing-a-vickrey-auction-contract/
+// Author: TODD PROEBSTING
 pragma solidity ^0.4.21;
 
 import "./ierc20token.sol";
