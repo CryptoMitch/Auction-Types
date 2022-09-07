@@ -42,5 +42,72 @@ contract VickreyAuction {
         revealed[seller] = true;
     }
 
-    // more code here
+    mapping(address => uint256) public balanceOf;
+    mapping(address => bytes32) public hashedBidOf;
+
+    function bid(bytes32 hash) public payable {
+        require(now < endOfBidding);
+        require(msg.sender != seller);
+
+        hashedBidOf[msg.sender] = hash;
+        balanceOf[msg.sender] += msg.value;
+        require(balanceOf[msg.sender] >= reservePrice);
+    }
+
+    function claim() public {
+        require(now >= endOfRevealing);
+
+        uint256 t = token.balanceOf(this);
+        require(token.transfer(highBidder, t));
+    }
+
+    function transfer(address from, address to, uint256 amount) private {
+        balanceOf[to] += amount;
+        balanceOf[from] -= amount;
+    }
+
+    function reveal(uint256 amount, uint256 nonce) public {
+        require(now >= endOfBidding && now < endOfRevealing);
+
+        require(keccak256(amount, nonce) == hashedBidOf[msg.sender]);
+
+        require(!revealed[msg.sender]);
+        revealed[msg.sender] = true;
+
+        if (amount > balanceOf[msg.sender]) {
+            // insufficient funds to cover bid amount, so ignore it
+            return;
+        }
+
+        if (amount >= highBid) {
+            // undo the previous escrow
+            transfer(seller, highBidder, secondBid);
+
+            // update the highest and second highest bids
+            secondBid = highBid;
+            highBid = amount;
+            highBidder = msg.sender;
+
+            // escrow an amount equal to the second highest bid
+            transfer(highBidder, seller, secondBid);
+        } else if (amount > secondBid) {
+            // undo the previous escrow
+            transfer(seller, highBidder, secondBid);
+
+            // update the second highest bid
+            secondBid = amount;
+
+            // escrow an amount equal to the second highest bid
+            transfer(highBidder, seller, secondBid);
+       }
+    }
+
+    function withdraw() public {
+        require(now >= endOfRevealing);
+        require(revealed[msg.sender]);
+
+        uint256 amount = balanceOf[msg.sender];
+        balanceOf[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
 }
